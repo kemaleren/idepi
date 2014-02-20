@@ -162,9 +162,10 @@ def optstat_args(parser):
 
 def feature_args(parser):
     #                   option             action                type      dest
-    parser.add_argument('--no-pngs',       action='store_false',           dest='PNGS')
-    parser.add_argument('--no-pngs-pairs', action='store_false',           dest='PNGS_PAIRS')
-    parser.add_argument('--radius',                              type=int, dest='RADIUS')
+    parser.add_argument('--no-pngs',        action='store_false',           dest='PNGS')
+    parser.add_argument('--no-pngs-pairs',  action='store_false',           dest='PNGS_PAIRS')
+    parser.add_argument('--radius',                               type=int, dest='RADIUS')
+    parser.add_argument('--no-isoelectric', action='store_false',           dest='ISOELECTRIC')
     parser.set_defaults(
         RADIUS=0
         )

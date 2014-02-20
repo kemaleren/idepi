@@ -29,11 +29,14 @@ from idepi.feature_extraction._msavectorizerpairwise import *
 from idepi.feature_extraction._msavectorizerregex import *
 from idepi.feature_extraction._msavectorizerregexpairwise import *
 
+from idepi.feature_extraction._msavectorizerisoelectric import MSAVectorizerIsoelectric
+
 __all__ = ['FeatureUnion']
 __all__ += _msavectorizer.__all__
 __all__ += _msavectorizerpairwise.__all__
 __all__ += _msavectorizerregex.__all__
 __all__ += _msavectorizerregexpairwise.__all__
+__all__.append('MSAVectorizerIsoelectric')
 
 
 class FeatureUnion(FeatureUnion_):

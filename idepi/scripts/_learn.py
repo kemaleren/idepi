@@ -60,7 +60,8 @@ from idepi.feature_extraction import (
     MSAVectorizer,
     MSAVectorizerPairwise,
     MSAVectorizerRegex,
-    MSAVectorizerRegexPairwise
+    MSAVectorizerRegexPairwise,
+    MSAVectorizerIsoelectric,
     )
 from idepi.filters import naive_filter
 from idepi.labeler import (
@@ -176,6 +177,10 @@ def main(args=None):
         extractors.append(
             ('pngs_pairs', MSAVectorizerRegexPairwise(re_pngs, 4, name='PNGS'))
             )
+
+    if ARGS.ISOELECTRIC:
+        extractors.append(('isoelectric',
+                           MSAVectorizerIsoelectric(ARGS.ENCODER)))
 
     extractor = FeatureUnion(extractors, n_jobs=1)  # n_jobs must be one for now
     X = extractor.fit_transform(alignment)
