@@ -32,18 +32,16 @@ FASTA_FILE = os.path.join(DATA_DIR, '4NCO.fasta.txt')
 PDB_FILE = os.path.join(DATA_DIR, '4NCO.pdb')
 
 
-# read FASTA file
+# read FASTA file and get gp120 sequence
 with open(FASTA_FILE, "rU") as handle:
     records = list(seqio.parse(handle, "fasta"))
-
 FASTA_SEQ = records[0]
 
-# read PDB file
-parser = biopdb.PDBParser()
-full_structure = parser.get_structure('gp140', PDB_FILE)
-model = full_structure[0]
-
-GP120S = list(model[i] for i in 'AEI')
+# read PDB file and get gp120 chains
+PARSER = biopdb.PDBParser()
+FULL_STRUCTURE = PARSER.get_structure('gp140', PDB_FILE)
+MODEL = FULL_STRUCTURE[0]
+GP120S = list(MODEL[i] for i in 'AEI')
 
 
 def align_to_env(seq):
@@ -53,12 +51,15 @@ def align_to_env(seq):
     the reference sequence.
 
     """
+    # TODO: use BioExt's align function, to avoid this extra work of
+    # creating arguments and reading from a temporary file.
     parser, ns, args = init_args(description="align", args=[])
     parser = hmmer_args(parser)
     ARGS = parse_args(parser, [], namespace=ns)
     set_util_params(ARGS.REFSEQ.id)
-    generate_alignment([records[0]], 'tmp.sto', is_refseq, ARGS, load=False)
-    return AlignIO.read('./tmp.sto', 'stockholm')
+    generate_alignment([records[0]], '/tmp/env_alignment.sto', is_refseq, ARGS,
+                       load=False)
+    return AlignIO.read('/tmp/env_alignment.sto', 'stockholm')
 
 
 def align(a, b):
@@ -254,8 +255,7 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
 
     # TODO: make this class a base class for structural features.
 
-    def __init__(self, fasta_seq=None, gp120s=None,
-                 radius=10):
+    def __init__(self, fasta_seq=None, gp120s=None, radius=10):
         if not isinstance(radius, int) or radius < 0:
             raise ValueError('radius expects a positive integer')
         if fasta_seq is None:
@@ -263,11 +263,11 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
         if gp120s is None:
             gp120s = GP120S
         self.__alignment_length = 0
+
         self.fasta_seq = fasta_seq
         self.gp120s = gp120s
         self.radius = radius
         self.feature_names_ = []
-        self.vocabulary_ = {}
 
         self.atoms = list(a for chain in gp120s for a in chain.get_atoms())
         self.residues = list(r for chain in gp120s for r in chain)
@@ -279,8 +279,8 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
             # mismatches.
             assert k.resname.upper() == seq3(fasta_seq[v]).upper()
 
-            for k, v in f2r.items():
-                assert len(v) == 3
+        for k, v in f2r.items():
+            assert len(v) == 3
 
         self.f2r = f2r
         self.r2f = r2f
@@ -292,7 +292,7 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
         # align env sequence and PDB fasta sequence
         self.aligned_env_pdb = align_to_env(self.fasta_seq)
 
-        # make final dictionaries
+        # make alignment dictionaries
         seq_a, seq_b = self.aligned_env_pdb
         env_to_pdb, pdb_to_env = make_alignment_dicts(seq_a, seq_b)
         self.env_to_pdb = env_to_pdb
@@ -302,14 +302,13 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
         return 'isoelectric_label_{}_radius_{}'.format(label, self.radius)
 
     def fit(self, alignment):
-
         if not isinstance(alignment, LabeledMSA):
             raise ValueError("MSAVectorizers require a LabeledMSA")
 
         column_labels = list(alignment.labels)
         feature_names = []
-
         k = 0
+
         for i in range(alignment.get_alignment_length()):
             try:
                 feature_name = self.feature_name(column_labels[i])
@@ -336,7 +335,6 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
         data = np.zeros((len(alignment), ncol), dtype=int)
 
         for i, seq in enumerate(alignment):
-            # make forward and backward alignment dictionaries
             seq_to_ref, ref_to_seq = make_seqrecord_dicts(seq)
             seq_ = ''.join(ltr.upper() for ltr in str(seq.seq))
             for j in range(ncol):
@@ -348,16 +346,13 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
                     nearby_ref = set(self.pdb_to_env[elt]
                                      for elt in nearby_pdb)
                     nearby_seq = set(ref_to_seq[elt] for elt in nearby_ref)
-
                     nearby_seq.add(ref_to_seq[j])
                     residue_seq = ''.join(seq_[i] for i in nearby_seq)
                     analysis = ProteinAnalysis(residue_seq)
                     value = analysis.isoelectric_point()
-
                     data[i, j] = value
                 except KeyError:
                     pass
-
         return data
 
     def get_feature_names(self):
