@@ -1,12 +1,10 @@
+import os
+from collections import defaultdict
+
 import numpy as np
+
 import Bio.PDB as biopdb
 import Bio.SeqIO as seqio
-from collections import defaultdict
-from idepi.argument import parse_args
-from idepi.argument import init_args, hmmer_args
-from idepi.util import generate_alignment
-from idepi.util import is_refseq
-from idepi.util import set_util_params
 from Bio import AlignIO
 from Bio import pairwise2
 from Bio.SubsMat import MatrixInfo as matlist
@@ -14,11 +12,22 @@ from Bio.SeqUtils import seq3
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 
 from sklearn.base import BaseEstimator, TransformerMixin
+
+from idepi.argument import parse_args
+from idepi.argument import init_args, hmmer_args
+from idepi.util import generate_alignment
+from idepi.util import is_refseq
+from idepi.util import set_util_params
 from idepi.labeledmsa import LabeledMSA
+from idepi import __path__ as idepi_path
 
-import os
 
-DATA_DIR = "/home/kemal/devel/idepi/data"
+# TODO: generalize this code so that it can handle more than just PDB
+# structure 4NCO.
+
+# TODO: get rid of these global variables.
+
+DATA_DIR = os.path.join(idepi_path[0], 'data')
 FASTA_FILE = os.path.join(DATA_DIR, '4NCO.fasta.txt')
 PDB_FILE = os.path.join(DATA_DIR, '4NCO.pdb')
 
@@ -37,15 +46,13 @@ model = full_structure[0]
 GP120S = list(model[i] for i in 'AEI')
 
 
-def residue_center(r):
-    return np.vstack(list(a.coord for a in r)).mean(axis=0)
+def align_to_env(seq):
+    """Align a SeqRecord to the hxb2 Env reference.
 
+    Returns an alignment object with two sequences, where the first is
+    the reference sequence.
 
-def atom_distance(r1, r2):
-    return min(a1 - a2 for a1 in r1 for a2 in r2)
-
-
-def align_env(seq):
+    """
     parser, ns, args = init_args(description="align", args=[])
     parser = hmmer_args(parser)
     ARGS = parse_args(parser, [], namespace=ns)
@@ -55,6 +62,13 @@ def align_env(seq):
 
 
 def align(a, b):
+    """Global alignment of two sequences.
+
+    Returns f_align, p_algin, score, begin, end. See
+    pairwise2.align.globalds for details.
+
+    """
+    # TODO: use the aligner in BioExt
     matrix = matlist.blosum62
     gap_open = -10
     gap_extend = -0.5
@@ -62,8 +76,33 @@ def align(a, b):
     return alns[0]
 
 
-# assign coordinates of gp120 to fasta sequence
+# TODO: the following dict-making functions are all similar. Find some
+# way of abstracting out their core functionality.
+
 def make_seq_pdb_dicts(fasta_seq, pdb_structures):
+    """Align the FASTA sequence of gp120 to the PDB residues.
+
+    Each position in the FASTA sequence corresponds to three residues,
+    one from each strand of the trimer.
+
+    Parameters
+    ----------
+    fasta_seq : SeqRecord
+        Sequence of the gp120 protein.
+
+    pdb_structures : iterable of Bio.PDB chains
+        The three gp120 chains of the trimer.
+
+    Returns
+    ------
+    f2r : dict
+        f2r[i] is the set of residues corresponding to the `i`th residue in
+        the fasta sequence.
+
+    r2f : dict
+        r2f[r] is the index of the fasta sequence corresponding to residue r.
+
+    """
     f2r_dict = defaultdict(list)
     r2f_dict = {}
     for struct in pdb_structures:
@@ -87,6 +126,25 @@ def make_seq_pdb_dicts(fasta_seq, pdb_structures):
 
 
 def make_seqrecord_dicts(seq):
+    """Map between positions in the LabeledMSA and an aligned
+    sequence.
+
+    Parameters
+    ----------
+    seq : SeqRecord
+        An element from a LabeledMSA.
+
+    Results
+    -------
+    seq_to_ref : dict
+        Maps from positions in the sequence to positions in the
+        reference.
+
+    ref_to_seq : dict
+        Maps from positions in the reference to positions in the
+        sequence.
+
+    """
     seq_to_ref = {}
     ref_to_seq = {}
     seq_idx = -1
@@ -99,9 +157,25 @@ def make_seqrecord_dicts(seq):
     return seq_to_ref, ref_to_seq
 
 
-def make_alignment_dicts(msa):
-    assert len(msa) == 2
-    seq_a, seq_b = msa
+def make_alignment_dicts(seq_a, seq_b):
+    """Map corresponding positions between the two sequences.
+
+    Parameters
+    ----------
+    seq_a, seq_b : SeqRecord
+        Aligned sequences.
+
+    Returns
+    -------
+    a2b : dict
+        Position ``i`` in the original ``seq_a`` maps to position
+        ``a2b[i]`` in the original ``seq_b``.
+
+    b2a : dict
+        Position ``i`` in the original ``seq_b`` maps to position
+        ``b2a[i]`` in the original ``seq_a``.
+
+    """
     d_a_to_b = {}
     d_b_to_a = {}
     idx_a = -1
@@ -117,8 +191,29 @@ def make_alignment_dicts(msa):
     return d_a_to_b, d_b_to_a
 
 
+def residue_center(r):
+    """the mean of the residue's atom coordinates"""
+    return np.vstack(list(a.coord for a in r)).mean(axis=0)
+
+
 def find_nearby(i, f2r, r2f, searcher, radius):
-    """for position i, find nearby positions"""
+    """For residue in position i, find positions nearby residues.
+
+    Parameters
+    ----------
+    i : int
+        Position of a residue in the FASTA sequence.
+
+    f2r, r2f : dicts
+        Results of make_seq_pdb_dicts().
+
+    searcher : Bio.PDB.NeighborSearch
+        A searcher initialized with all the residues of interest.
+
+    radius : int
+        Distance in Angstroms.
+
+    """
     if i not in f2r:
         return []
     nearby = set()
@@ -130,8 +225,36 @@ def find_nearby(i, f2r, r2f, searcher, radius):
 
 
 class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
+    """Isoelectric point structural features.
 
-    def __init__(self, encoder, fasta_seq=None, gp120s=None,
+    Uses the 3D structure of gp120 (derived from PDB structure id
+    4NCO) to find nearby residues within some radius. Computes the
+    isoelectric point of that collection of residues.
+
+    For each transformed sequence, the final vector has dimensionality
+    equal to the length of the reference hxb2 Env sequence.
+
+    Residues are mapped to 3D coordinates through the following chain
+    of alignments:
+
+    target sequence <-> hxb2 Env <-> 4NCO FASTA file <-> 4NCO PDB file
+
+    Parameters
+    ----------
+    fasta_seq : SeqRecord
+        The sequence of the gp120 proteins.
+
+    gp120s : iterable of Bio.PDB chains
+        The three gp120 protein structures.
+
+    radius : int
+        Radius in Angstroms.
+
+    """
+
+    # TODO: make this class a base class for structural features.
+
+    def __init__(self, fasta_seq=None, gp120s=None,
                  radius=10):
         if not isinstance(radius, int) or radius < 0:
             raise ValueError('radius expects a positive integer')
@@ -140,7 +263,6 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
         if gp120s is None:
             gp120s = GP120S
         self.__alignment_length = 0
-        self.encoder = encoder
         self.fasta_seq = fasta_seq
         self.gp120s = gp120s
         self.radius = radius
@@ -168,10 +290,11 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
                                   self.searcher, radius=self.radius)
 
         # align env sequence and PDB fasta sequence
-        self.aligned_env_pdb = align_env(self.fasta_seq)
+        self.aligned_env_pdb = align_to_env(self.fasta_seq)
 
         # make final dictionaries
-        env_to_pdb, pdb_to_env = make_alignment_dicts(self.aligned_env_pdb)
+        seq_a, seq_b = self.aligned_env_pdb
+        env_to_pdb, pdb_to_env = make_alignment_dicts(seq_a, seq_b)
         self.env_to_pdb = env_to_pdb
         self.pdb_to_env = env_to_pdb
 

@@ -184,8 +184,7 @@ def main(args=None):
             )
 
     if ARGS.ISOELECTRIC:
-        extractors.append(('isoelectric',
-                           MSAVectorizerIsoelectric(ARGS.ENCODER)))
+        extractors.append(('isoelectric', MSAVectorizerIsoelectric()))
 
     extractor = FeatureUnion(extractors, n_jobs=1)  # n_jobs must be 1 for now
     X = extractor.fit_transform(alignment)
