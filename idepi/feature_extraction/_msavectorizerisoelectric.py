@@ -5,19 +5,16 @@ import numpy as np
 
 import Bio.PDB as biopdb
 import Bio.SeqIO as seqio
-from Bio import AlignIO
-from Bio import pairwise2
-from Bio.SubsMat import MatrixInfo as matlist
 from Bio.SeqUtils import seq3
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from idepi.argument import parse_args
-from idepi.argument import init_args, hmmer_args
-from idepi.util import generate_alignment
-from idepi.util import is_refseq
-from idepi.util import set_util_params
+from BioExt.references import hxb2
+from BioExt.scorematrices import HIV_BETWEEN_F
+from BioExt.align import Aligner
+from BioExt.misc import translate
+
 from idepi.labeledmsa import LabeledMSA
 from idepi import __path__ as idepi_path
 
@@ -42,39 +39,6 @@ PARSER = biopdb.PDBParser()
 FULL_STRUCTURE = PARSER.get_structure('gp140', PDB_FILE)
 MODEL = FULL_STRUCTURE[0]
 GP120S = list(MODEL[i] for i in 'AEI')
-
-
-def align_to_env(seq):
-    """Align a SeqRecord to the hxb2 Env reference.
-
-    Returns an alignment object with two sequences, where the first is
-    the reference sequence.
-
-    """
-    # TODO: use BioExt's align function, to avoid this extra work of
-    # creating arguments and reading from a temporary file.
-    parser, ns, args = init_args(description="align", args=[])
-    parser = hmmer_args(parser)
-    ARGS = parse_args(parser, [], namespace=ns)
-    set_util_params(ARGS.REFSEQ.id)
-    generate_alignment([records[0]], '/tmp/env_alignment.sto', is_refseq, ARGS,
-                       load=False)
-    return AlignIO.read('/tmp/env_alignment.sto', 'stockholm')
-
-
-def align(a, b):
-    """Global alignment of two sequences.
-
-    Returns f_align, p_algin, score, begin, end. See
-    pairwise2.align.globalds for details.
-
-    """
-    # TODO: use the aligner in BioExt
-    matrix = matlist.blosum62
-    gap_open = -10
-    gap_extend = -0.5
-    alns = pairwise2.align.globalds(a, b, matrix, gap_open, gap_extend)
-    return alns[0]
 
 
 # TODO: the following dict-making functions are all similar. Find some
@@ -106,15 +70,18 @@ def make_seq_pdb_dicts(fasta_seq, pdb_structures):
     """
     f2r_dict = defaultdict(list)
     r2f_dict = {}
+    aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
+
     for struct in pdb_structures:
         ppb = biopdb.PPBuilder(radius=20)
         polys = ppb.build_peptides(struct)
         for poly in polys:
             poly_seq = poly.get_sequence()
-            f_align, p_align, score, begin, end = align(fasta_seq, poly_seq)
+            score, f_align, p_align = aligner(fasta_seq, poly_seq)
+            assert len(f_align) == len(p_align)
             f_idx = -1
             p_idx = -1
-            for i in range(begin, end):
+            for i in range(len(f_align)):
                 if f_align[i] != "-":
                     f_idx += 1
                 if p_align[i] != "-":
@@ -238,7 +205,7 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
     Residues are mapped to 3D coordinates through the following chain
     of alignments:
 
-    target sequence <-> hxb2 Env <-> 4NCO FASTA file <-> 4NCO PDB file
+    target sequence <=> hxb2 Env <=> 4NCO FASTA file <=> 4NCO PDB file
 
     Parameters
     ----------
@@ -290,10 +257,11 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
                                   self.searcher, radius=self.radius)
 
         # align env sequence and PDB fasta sequence
-        self.aligned_env_pdb = align_to_env(self.fasta_seq)
+        refseq = translate(hxb2.env.load())
+        aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
+        score, seq_a, seq_b = aligner(refseq, self.fasta_seq)
 
         # make alignment dictionaries
-        seq_a, seq_b = self.aligned_env_pdb
         env_to_pdb, pdb_to_env = make_alignment_dicts(seq_a, seq_b)
         self.env_to_pdb = env_to_pdb
         self.pdb_to_env = env_to_pdb
