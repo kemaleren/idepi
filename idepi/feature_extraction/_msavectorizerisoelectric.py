@@ -1,3 +1,17 @@
+"""Computes isoelectric point in radius around residues.
+
+TODO:
+-----
+- generalize this code so that it can handle more than just PDB
+  structure 4NCO.
+
+- align sequences directly to PDB FASTA sequence instead of going
+  through the reference HXB2 Env sequence. Right now this is not
+  easy because all the vectorizers take LabeldMSA objects, which are
+  already aligned to the reference.
+
+"""
+
 import os
 from collections import defaultdict
 
@@ -18,11 +32,7 @@ from BioExt.misc import translate
 from idepi.labeledmsa import LabeledMSA
 from idepi import __path__ as idepi_path
 
-
-# TODO: generalize this code so that it can handle more than just PDB
-# structure 4NCO.
-
-# TODO: get rid of these global variables.
+# TODO: get rid of all these global variables.
 
 DATA_DIR = os.path.join(idepi_path[0], 'data')
 FASTA_FILE = os.path.join(DATA_DIR, '4NCO.fasta.txt')
