@@ -202,15 +202,11 @@ def find_nearby(i, f2r, r2f, searcher, radius):
     return nearby
 
 
-class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
-    """Isoelectric point structural features.
+class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
+    """Structural features.
 
     Uses the 3D structure of gp120 (derived from PDB structure id
-    4NCO) to find nearby residues within some radius. Computes the
-    isoelectric point of that collection of residues.
-
-    For each transformed sequence, the final vector has dimensionality
-    equal to the length of the reference hxb2 Env sequence.
+    4NCO) to find nearby residues within some radius.
 
     Residues are mapped to 3D coordinates through the following chain
     of alignments:
@@ -229,8 +225,6 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
         Radius in Angstroms.
 
     """
-
-    # TODO: make this class a base class for structural features.
 
     def __init__(self, fasta_seq=None, gp120s=None, radius=10):
         if not isinstance(radius, int) or radius < 0:
@@ -277,7 +271,8 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
         self.pdb_to_env = env_to_pdb
 
     def feature_name(self, label):
-        return 'isoelectric_label_{}_radius_{}'.format(label, self.radius)
+        # TODO: use abstract base class
+        raise Exception('this is a base class only')
 
     def fit(self, alignment):
         if not isinstance(alignment, LabeledMSA):
@@ -300,6 +295,10 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
 
         return self
 
+    def _compute(self, seq_upper, ref_idx, pdb_idx, nearby_pdb,
+                 nearby_ref, nearby_seq):
+        raise Exception('this is a base class only')
+
     def transform(self, alignment):
         ncol = alignment.get_alignment_length()
 
@@ -314,7 +313,7 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
 
         for i, seq in enumerate(alignment):
             seq_to_ref, ref_to_seq = make_seqrecord_dicts(seq)
-            seq_ = ''.join(ltr.upper() for ltr in str(seq.seq))
+            seq_upper = ''.join(ltr.upper() for ltr in str(seq.seq))
             for j in range(ncol):
                 try:
                     ref_idx = j
@@ -325,13 +324,32 @@ class MSAVectorizerIsoelectric(BaseEstimator, TransformerMixin):
                                      for elt in nearby_pdb)
                     nearby_seq = set(ref_to_seq[elt] for elt in nearby_ref)
                     nearby_seq.add(ref_to_seq[j])
-                    residue_seq = ''.join(seq_[i] for i in nearby_seq)
-                    analysis = ProteinAnalysis(residue_seq)
-                    value = analysis.isoelectric_point()
-                    data[i, j] = value
+
+                    data[i, j] = self._compute(seq_upper, ref_idx, pdb_idx,
+                                               nearby_pdb, nearby_ref,
+                                               nearby_seq)
                 except KeyError:
                     pass
         return data
 
     def get_feature_names(self):
         return self.feature_names_
+
+
+class MSAVectorizerIsoelectric(MSAVectorizerStructural):
+    """Isoelectric point structural features.
+
+    Computes the isoelectric point of that collection of residues.
+
+    For each transformed sequence, the final vector has dimensionality
+    equal to the length of the reference hxb2 Env sequence.
+
+    """
+    def feature_name(self, label):
+        return 'isoelectric_label_{}_radius_{}'.format(label, self.radius)
+
+    def _compute(self, seq_upper, ref_idx, pdb_idx, nearby_pdb,
+                 nearby_ref, nearby_seq):
+        residue_seq = ''.join(seq_upper[i] for i in nearby_seq)
+        analysis = ProteinAnalysis(residue_seq)
+        return analysis.isoelectric_point()
