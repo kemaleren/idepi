@@ -1,8 +1,6 @@
 
 from Bio.Align import MultipleSeqAlignment
 
-from BioExt.collections import Counter
-
 from idepi.constants import GAPS
 from idepi._common import base_10_to_n, base_26_to_alph
 
