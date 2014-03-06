@@ -2,6 +2,8 @@
 
 TODO:
 -----
+- variables names are inconsistent and confusing.
+
 - generalize this code so that it can handle more than just PDB
   structure 4NCO.
 
@@ -208,6 +210,9 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
     Uses the 3D structure of gp120 (derived from PDB structure id
     4NCO) to find nearby residues within some radius.
 
+    For each transformed sequence, the final vector has dimensionality
+    equal to the length of the reference hxb2 Env sequence.
+
     Residues are mapped to 3D coordinates through the following chain
     of alignments:
 
@@ -271,8 +276,7 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         self.pdb_to_env = env_to_pdb
 
     def feature_name(self, label):
-        # TODO: use abstract base class
-        raise Exception('this is a base class only')
+        return '{}_label_{}_radius_{}'.format(self.name, label, self.radius)
 
     def fit(self, alignment):
         if not isinstance(alignment, LabeledMSA):
@@ -295,8 +299,9 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
 
         return self
 
-    def _compute(self, seq_upper, ref_idx, pdb_idx, nearby_pdb,
-                 nearby_ref, nearby_seq):
+    def _compute(self, seq, refseq, seq_to_ref, ref_to_seq, ref_idx,
+                 pdb_idx, nearby_pdb, nearby_ref, nearby_seq):
+        # TODO: cut down on the number of arguments
         raise Exception('this is a base class only')
 
     def transform(self, alignment):
@@ -313,9 +318,11 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
 
         for i, seq in enumerate(alignment):
             seq_to_ref, ref_to_seq = make_seqrecord_dicts(seq)
-            seq_upper = ''.join(ltr.upper() for ltr in str(seq.seq))
             for j in range(ncol):
                 try:
+                    # TODO: the first half of this can be precomputed
+                    # during fit() and not all of it needs to be
+                    # computed here
                     ref_idx = j
                     pdb_idx = self.env_to_pdb[ref_idx]
                     nearby_pdb = find_nearby(pdb_idx, self.f2r, self.r2f,
@@ -325,7 +332,9 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
                     nearby_seq = set(ref_to_seq[elt] for elt in nearby_ref)
                     nearby_seq.add(ref_to_seq[j])
 
-                    data[i, j] = self._compute(seq_upper, ref_idx, pdb_idx,
+                    data[i, j] = self._compute(seq, alignment.refseq,
+                                               seq_to_ref, ref_to_seq,
+                                               ref_idx, pdb_idx,
                                                nearby_pdb, nearby_ref,
                                                nearby_seq)
                 except KeyError:
@@ -337,19 +346,31 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
 
 
 class MSAVectorizerIsoelectric(MSAVectorizerStructural):
-    """Isoelectric point structural features.
+    """Computes the isoelectric point of nearby residues."""
+    name = 'isoelectric'
 
-    Computes the isoelectric point of that collection of residues.
-
-    For each transformed sequence, the final vector has dimensionality
-    equal to the length of the reference hxb2 Env sequence.
-
-    """
     def feature_name(self, label):
         return 'isoelectric_label_{}_radius_{}'.format(label, self.radius)
 
-    def _compute(self, seq_upper, ref_idx, pdb_idx, nearby_pdb,
-                 nearby_ref, nearby_seq):
-        residue_seq = ''.join(seq_upper[i] for i in nearby_seq)
+    def _compute(self, seq, refseq, seq_to_ref, ref_to_seq, ref_idx,
+                 pdb_idx, nearby_pdb, nearby_ref, nearby_seq):
+        residue_seq = ''.join(seq[i].upper() for i in nearby_seq)
         analysis = ProteinAnalysis(residue_seq)
         return analysis.isoelectric_point()
+
+
+class MSAVectorizerDifference(MSAVectorizerStructural):
+    """Computes the number of residues that differ from the reference."""
+    name = 'difference'
+
+    def _compute(self, seq, refseq, seq_to_ref, ref_to_seq, ref_idx,
+                 pdb_idx, nearby_pdb, nearby_ref, nearby_seq):
+        if not nearby_pdb:
+            return -1  # FIXME: probably not an appropriate value for this case
+        result = 0
+        for seq_idx in nearby_seq:
+            seq_residue = seq[seq_idx]
+            env_residue = refseq[seq_to_ref[seq_idx]]
+            if seq_residue.upper() == env_residue.upper():
+                result += 1
+        return result

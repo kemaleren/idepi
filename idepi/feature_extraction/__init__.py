@@ -30,6 +30,7 @@ from idepi.feature_extraction._msavectorizerregex import *
 from idepi.feature_extraction._msavectorizerregexpairwise import *
 
 from idepi.feature_extraction._msavectorizerstructural import MSAVectorizerIsoelectric
+from idepi.feature_extraction._msavectorizerstructural import MSAVectorizerDifference
 
 __all__ = ['FeatureUnion']
 __all__ += _msavectorizer.__all__

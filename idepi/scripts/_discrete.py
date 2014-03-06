@@ -61,6 +61,7 @@ from idepi.feature_extraction import (
     MSAVectorizerRegex,
     MSAVectorizerRegexPairwise,
     MSAVectorizerIsoelectric,
+    MSAVectorizerDifference,
     )
 from idepi.filters import naive_filter
 from idepi.labeler import (
@@ -185,6 +186,8 @@ def main(args=None):
 
     if ARGS.ISOELECTRIC:
         extractors.append(('isoelectric', MSAVectorizerIsoelectric()))
+
+    extractors.append(('difference', MSAVectorizerDifference()))
 
     extractor = FeatureUnion(extractors, n_jobs=1)  # n_jobs must be 1 for now
     X = extractor.fit_transform(alignment)
