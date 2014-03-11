@@ -2,6 +2,8 @@
 
 TODO:
 -----
+- Remove gp41 portion of sequence
+
 - variables names are inconsistent and confusing.
 
 - generalize this code so that it can handle more than just PDB
@@ -11,6 +13,13 @@ TODO:
   through the reference HXB2 Env sequence. Right now this is not
   easy because all the vectorizers take LabeldMSA objects, which are
   already aligned to the reference.
+
+  It is not possible to recreate the original sequences, becaue gaps
+  are ommited.
+
+  Doing this would change the meaning of the 'difference' features.
+
+- how to deal with gaps? right now we just ignore them.
 
 """
 
