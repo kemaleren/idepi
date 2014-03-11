@@ -100,38 +100,6 @@ def make_seq_pdb_dicts(fasta_seq, pdb_structures):
     return f2r_dict, r2f_dict
 
 
-def make_seqrecord_dicts(seq):
-    """Map between positions in the LabeledMSA and an aligned
-    sequence.
-
-    Parameters
-    ----------
-    seq : SeqRecord
-        An element from a LabeledMSA.
-
-    Results
-    -------
-    seq_to_ref : dict
-        Maps from positions in the sequence to positions in the
-        reference.
-
-    ref_to_seq : dict
-        Maps from positions in the reference to positions in the
-        sequence.
-
-    """
-    seq_to_ref = {}
-    ref_to_seq = {}
-    seq_idx = -1
-    for ref_idx in range(len(seq)):
-        if seq[ref_idx] == "-":
-            continue
-        seq_idx += 1
-        seq_to_ref[seq_idx] = ref_idx
-        ref_to_seq[ref_idx] = seq_idx
-    return seq_to_ref, ref_to_seq
-
-
 def make_alignment_dicts(seq_a, seq_b):
     """Map corresponding positions between the two sequences.
 
