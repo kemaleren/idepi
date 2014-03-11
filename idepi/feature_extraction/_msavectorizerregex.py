@@ -19,7 +19,8 @@ class MSAVectorizerRegex(BaseEstimator, TransformerMixin):
         self.feature_names_ = []
         self.vocabulary_ = {}
 
-    def fit(self, alignment):
+    def fit(self, tofit):
+        alignment, seqrecords = tofit
         if not isinstance(alignment, LabeledMSA):
             raise ValueError("MSAVectorizers require a LabeledMSA")
 
@@ -58,7 +59,8 @@ class MSAVectorizerRegex(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, alignment):
+    def transform(self, tofit):
+        alignment, seqrecords = tofit
         vocab = self.vocabulary_
         data = zeros((len(alignment), len(vocab)), dtype=int)
 

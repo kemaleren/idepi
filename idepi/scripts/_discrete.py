@@ -191,7 +191,8 @@ def main(args=None):
         extractors.append(('difference', MSAVectorizerDifference()))
 
     extractor = FeatureUnion(extractors, n_jobs=1)  # n_jobs must be 1 for now
-    X = extractor.fit_transform(alignment)
+    seqrecords_to_fit = list(s for s in seqrecords if s.id != 'HXB2_env')
+    X = extractor.fit_transform((alignment, seqrecords_to_fit))
 
     assert y.shape[0] == X.shape[0], \
         "number of classes doesn't match the data: %d vs %d" % (y.shape[0], X.shape[0])

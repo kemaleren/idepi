@@ -275,7 +275,8 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
     def feature_name(self, label):
         return '{}_label_{}_radius_{}'.format(self.name, label, self.radius)
 
-    def fit(self, seqrecords):
+    def fit(self, tofit):
+        alignment, seqrecords = tofit
         self.ref_len = len(self.fasta_seq)
         column_labels = list(map(str, range(self.ref_len)))
         feature_names = []
@@ -300,7 +301,8 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         # TODO: cut down on the number of arguments
         raise Exception('this is a base class only')
 
-    def transform(self, seqrecords):
+    def transform(self, tofit):
+        alignment, seqrecords = tofit
         ncol = self.ref_len
 
         if ncol != self.__alignment_length:
@@ -313,6 +315,9 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         # TODO: this assumes all default values are zeros
         data = np.zeros((len(seqrecords), ncol), dtype=int)
         aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
+
+        # TODO: check before doing this
+        seqrecords = list(translate(s) for s in seqrecords)
 
         for i, seq in enumerate(seqrecords):
             _, seq_a, seq_b = aligner(seq, self.fasta_seq)

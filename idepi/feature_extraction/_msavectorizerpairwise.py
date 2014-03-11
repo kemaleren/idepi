@@ -22,7 +22,8 @@ class MSAVectorizerPairwise(BaseEstimator, TransformerMixin):
         self.feature_names_ = []
         self.vocabulary_ = {}
 
-    def fit(self, alignment):
+    def fit(self, tofit):
+        alignment, seqrecords = tofit
         if not isinstance(alignment, LabeledMSA):
             raise ValueError("MSAVectorizers require a LabeledMSA")
 
@@ -72,7 +73,8 @@ class MSAVectorizerPairwise(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, alignment):
+    def transform(self, tofit):
+        alignment, seqrecords = tofit
         ncol = alignment.get_alignment_length()
 
         if ncol != self.__alignment_length:
