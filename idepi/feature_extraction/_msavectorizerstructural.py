@@ -271,31 +271,18 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         self.r2f = r2f
 
         self.searcher = biopdb.NeighborSearch(self.atoms)
-        self.nearby = find_nearby(self.fasta_seq, self.f2r, self.r2f,
-                                  self.searcher, radius=self.radius)
-
-        # align env sequence and PDB fasta sequence
-        refseq = translate(hxb2.env.load())
-        aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
-        score, seq_a, seq_b = aligner(refseq, self.fasta_seq)
-
-        # make alignment dictionaries
-        env_to_pdb, pdb_to_env = make_alignment_dicts(seq_a, seq_b)
-        self.env_to_pdb = env_to_pdb
-        self.pdb_to_env = pdb_to_env
 
     def feature_name(self, label):
         return '{}_label_{}_radius_{}'.format(self.name, label, self.radius)
 
-    def fit(self, alignment):
-        if not isinstance(alignment, LabeledMSA):
-            raise ValueError("MSAVectorizers require a LabeledMSA")
-
-        column_labels = list(alignment.labels)
+    def fit(self, seqrecords):
+        self.ref_len = len(self.fasta_seq)
+        column_labels = list(map(str, range(self.ref_len)))
         feature_names = []
         k = 0
 
-        for i in range(alignment.get_alignment_length()):
+        # TODO: these indices refer to 4NCO gp120.
+        for i in range(self.ref_len):
             try:
                 feature_name = self.feature_name(column_labels[i])
                 feature_names.append(feature_name)
@@ -303,18 +290,18 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
             except KeyError:
                 pass
 
-        self.__alignment_length = alignment.get_alignment_length()
+        self.__alignment_length = len(self.fasta_seq)
         self.feature_names_ = feature_names
 
         return self
 
-    def _compute(self, seq, refseq, seq_to_ref, ref_to_seq, ref_idx,
-                 pdb_idx, nearby_pdb, nearby_ref, nearby_seq):
+    def _compute(self, seq, seq_to_ref, ref_to_seq, ref_idx,
+                 nearby_ref, nearby_seq):
         # TODO: cut down on the number of arguments
         raise Exception('this is a base class only')
 
-    def transform(self, alignment):
-        ncol = alignment.get_alignment_length()
+    def transform(self, seqrecords):
+        ncol = self.ref_len
 
         if ncol != self.__alignment_length:
             msg = ('alignment length ({0:d}) does not match the'
@@ -323,29 +310,26 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
                        self.__alignment_length))
             raise ValueError(msg)
 
-        data = np.zeros((len(alignment), ncol), dtype=int)
+        # TODO: this assumes all default values are zeros
+        data = np.zeros((len(seqrecords), ncol), dtype=int)
+        aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
 
-        for i, seq in enumerate(alignment):
-            seq_to_ref, ref_to_seq = make_seqrecord_dicts(seq)
+        for i, seq in enumerate(seqrecords):
+            _, seq_a, seq_b = aligner(seq, self.fasta_seq)
+            seq_to_ref, ref_to_seq = make_alignment_dicts(seq_a, seq_b)
             for j in range(ncol):
                 try:
                     # TODO: the first half of this can be precomputed
                     # during fit() and not all of it needs to be
                     # computed here
                     ref_idx = j
-                    pdb_idx = self.env_to_pdb[ref_idx]
-                    nearby_pdb = find_nearby(pdb_idx, self.f2r, self.r2f,
+                    nearby_ref = find_nearby(ref_idx, self.f2r, self.r2f,
                                              self.searcher, self.radius)
-                    nearby_ref = set(self.pdb_to_env[elt]
-                                     for elt in nearby_pdb)
+                    nearby_ref.add(j)
                     nearby_seq = set(ref_to_seq[elt] for elt in nearby_ref)
-                    nearby_seq.add(ref_to_seq[j])
-
-                    data[i, j] = self._compute(seq, alignment.refseq,
-                                               seq_to_ref, ref_to_seq,
-                                               ref_idx, pdb_idx,
-                                               nearby_pdb, nearby_ref,
-                                               nearby_seq)
+                    data[i, j] = self._compute(seq, seq_to_ref,
+                                               ref_to_seq, ref_idx,
+                                               nearby_ref, nearby_seq)
                 except KeyError:
                     pass
         return data
@@ -361,8 +345,8 @@ class MSAVectorizerIsoelectric(MSAVectorizerStructural):
     def feature_name(self, label):
         return 'isoelectric_label_{}_radius_{}'.format(label, self.radius)
 
-    def _compute(self, seq, refseq, seq_to_ref, ref_to_seq, ref_idx,
-                 pdb_idx, nearby_pdb, nearby_ref, nearby_seq):
+    def _compute(self, seq, seq_to_ref, ref_to_seq, ref_idx,
+                 nearby_ref, nearby_seq):
         residue_seq = ''.join(seq[i].upper() for i in nearby_seq)
         analysis = ProteinAnalysis(residue_seq)
         return analysis.isoelectric_point()
@@ -372,14 +356,14 @@ class MSAVectorizerDifference(MSAVectorizerStructural):
     """Computes the number of residues that differ from the reference."""
     name = 'difference'
 
-    def _compute(self, seq, refseq, seq_to_ref, ref_to_seq, ref_idx,
-                 pdb_idx, nearby_pdb, nearby_ref, nearby_seq):
-        if not nearby_pdb:
+    def _compute(self, seq, seq_to_ref, ref_to_seq, ref_idx,
+                 nearby_ref, nearby_seq):
+        if not nearby_seq:
             return -1  # FIXME: probably not an appropriate value for this case
         result = 0
         for seq_idx in nearby_seq:
             seq_residue = seq[seq_idx]
-            env_residue = refseq[seq_to_ref[seq_idx]]
-            if seq_residue.upper() == env_residue.upper():
+            ref_residue = self.fasta_seq[seq_to_ref[seq_idx]]
+            if seq_residue.upper() == ref_residue.upper():
                 result += 1
         return result
