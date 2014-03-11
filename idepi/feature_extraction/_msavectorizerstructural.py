@@ -327,6 +327,6 @@ class MSAVectorizerDifference(MSAVectorizerStructural):
         for seq_idx in nearby_seq:
             seq_residue = seq[seq_idx]
             ref_residue = self.fasta_seq[seq_to_ref[seq_idx]]
-            if seq_residue.upper() == ref_residue.upper():
+            if seq_residue.upper() != ref_residue.upper():
                 result += 1
         return result
