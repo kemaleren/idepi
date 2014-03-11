@@ -282,7 +282,7 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         # make alignment dictionaries
         env_to_pdb, pdb_to_env = make_alignment_dicts(seq_a, seq_b)
         self.env_to_pdb = env_to_pdb
-        self.pdb_to_env = env_to_pdb
+        self.pdb_to_env = pdb_to_env
 
     def feature_name(self, label):
         return '{}_label_{}_radius_{}'.format(self.name, label, self.radius)
