@@ -347,6 +347,8 @@ def generate_alignment(seqrecords, sto_filename, ref_id_func, opts, load=True):
         with open(sto_filename, 'w') as fh:
             SeqIO.write(seqrecords, fh, 'stockholm')
     else:
+        tmphmm = ''
+        tmpaln = ''
         try:
             tmphmm = generate_hmm_(opts)
             tmpaln = generate_alignment_(seqrecords, tmphmm, opts, refseq=opts.REFSEQ)
