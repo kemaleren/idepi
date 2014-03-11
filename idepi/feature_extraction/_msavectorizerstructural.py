@@ -203,9 +203,9 @@ def find_nearby(i, f2r, r2f, searcher, radius):
         Distance in Angstroms.
 
     """
-    if i not in f2r:
-        return []
     nearby = set()
+    if i not in f2r:
+        return nearby
     for res in f2r[i]:
         found = searcher.search(residue_center(res), radius=radius,
                                 level='R')
