@@ -20,6 +20,7 @@ import Bio.PDB as biopdb
 import Bio.SeqIO as seqio
 from Bio.SeqUtils import seq3
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
+from Bio.Data.CodonTable import TranslationError
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -271,7 +272,10 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
 
         # TODO: check before doing this
-        seqrecords = list(translate(s) for s in seqrecords)
+        try:
+            seqrecords = list(translate(s) for s in seqrecords)
+        except TranslationError:
+            pass
 
         for i, seq in enumerate(seqrecords):
             _, seq_a, seq_b = aligner(seq, self.fasta_seq)
