@@ -166,6 +166,7 @@ def feature_args(parser):
     parser.add_argument('--no-pngs-pairs',  action='store_false',           dest='PNGS_PAIRS')
     parser.add_argument('--radius',                               type=int, dest='RADIUS')
     parser.add_argument('--no-isoelectric', action='store_false',           dest='ISOELECTRIC')
+    parser.add_argument('--no-difference', action='store_false',           dest='DIFFERENCE')
     parser.set_defaults(
         RADIUS=0
         )
