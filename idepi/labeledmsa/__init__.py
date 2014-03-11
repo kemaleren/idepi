@@ -38,10 +38,9 @@ class LabeledMSA(MultipleSeqAlignment):
             msa2,
             labels,
             positions,
-            refseq=msa[refidx]
             )
 
-    def __init__(self, msa, labels, positions, refseq=None):
+    def __init__(self, msa, labels, positions):
         if not isinstance(msa, MultipleSeqAlignment):
             raise TypeError("invalid msa type")
         ncol = msa.get_alignment_length()
@@ -49,7 +48,6 @@ class LabeledMSA(MultipleSeqAlignment):
             raise ValueError("all arguments must share the same column space")
         self.__labels = labels
         self.__positions = positions
-        self.refseq = refseq
         super(LabeledMSA, self).__init__(iter(msa), msa._alphabet)
 
     def __getitem__(self, index):
@@ -58,7 +56,6 @@ class LabeledMSA(MultipleSeqAlignment):
                 super(LabeledMSA, self).__getitem__(index),
                 self.__labels,
                 self.__positions,
-                self.refseq
                 )
         elif len(index) != 2 or not all(isinstance(idx, (int, slice)) for idx in index):
             raise TypeError("invalid index type")
@@ -71,7 +68,6 @@ class LabeledMSA(MultipleSeqAlignment):
                 super(LabeledMSA, self).__getitem__(index),
                 self.__labels[col_index],
                 self.__positions[col_index],
-                self.refseq,
                 )
         else:
             raise TypeError("invalid index type")
@@ -83,7 +79,6 @@ class LabeledMSA(MultipleSeqAlignment):
             super(LabeledMSA, self).__add__(other),
             self.__labels + other.__labels,
             self.__positions + other.__positions,
-            self.refseq,
             )
 
     def get_alignment_length(self):
