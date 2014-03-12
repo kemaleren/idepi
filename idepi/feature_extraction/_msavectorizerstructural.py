@@ -9,8 +9,6 @@ TODO:
 
 - how to deal with gaps? right now we just ignore them.
 
-- new feature: number of gaps
-
 """
 
 import os
@@ -346,5 +344,26 @@ class MSAVectorizerGap(MSAVectorizerStructural):
                     break
                 result += 1
             return result
+        except KeyError:
+            return 0
+
+
+class MSAVectorizerGapIsoelectric(MSAVectorizerStructural):
+    """isoelectric point of residues that did not get aligned"""
+    name = 'gap'
+
+    def _compute(self, seq, seq_to_ref, ref_to_seq, ref_idx,
+                 nearby_ref, nearby_seq):
+        try:
+            result = []
+            seq_idx = ref_to_seq[ref_idx]
+            for i in range(seq_idx + 1, len(seq)):
+                if i in seq_to_ref:
+                    break
+                result.append(seq[i])
+            if not result:
+                return 0
+            analysis = ProteinAnalysis(''.join(result))
+            return analysis.isoelectric_point()
         except KeyError:
             return 0

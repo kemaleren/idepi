@@ -32,6 +32,7 @@ from idepi.feature_extraction._msavectorizerregexpairwise import *
 from idepi.feature_extraction._msavectorizerstructural import MSAVectorizerIsoelectric
 from idepi.feature_extraction._msavectorizerstructural import MSAVectorizerDifference
 from idepi.feature_extraction._msavectorizerstructural import MSAVectorizerGap
+from idepi.feature_extraction._msavectorizerstructural import MSAVectorizerGapIsoelectric
 
 __all__ = ['FeatureUnion']
 __all__ += _msavectorizer.__all__
@@ -41,6 +42,7 @@ __all__ += _msavectorizerregexpairwise.__all__
 __all__.append('MSAVectorizerIsoelectric')
 __all__.append('MSAVectorizerDifference')
 __all__.append('MSAVectorizerGap')
+__all__.append('MSAVectorizerGapIsoelectric')
 
 
 class FeatureUnion(FeatureUnion_):
