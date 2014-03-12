@@ -161,14 +161,14 @@ def find_nearby(i, f2r, r2f, searcher, radius, include_self=True):
 
     """
     nearby = set()
+    if include_self:
+        nearby.add(i)
     if i not in f2r:
         return nearby
     for res in f2r[i]:
         found = searcher.search(residue_center(res), radius=radius,
                                 level='R')
         nearby.update(r2f[r] for r in found if r in r2f)
-    if include_self:
-        nearby.add(i)
     return nearby
 
 
@@ -316,6 +316,7 @@ class MSAVectorizerIsoelectric(MSAVectorizerStructural):
     def _compute(self, seq, seq_to_ref, ref_to_seq, ref_idx,
                  nearby_ref, nearby_seq):
         residue_seq = ''.join(seq[i].upper() for i in nearby_seq)
+        assert residue_seq
         analysis = ProteinAnalysis(residue_seq)
         return analysis.isoelectric_point()
 
