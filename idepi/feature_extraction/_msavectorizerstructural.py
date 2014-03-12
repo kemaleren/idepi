@@ -9,6 +9,8 @@ TODO:
 
 - how to deal with gaps? right now we just ignore them.
 
+- new feature: number of gaps
+
 """
 
 import os
@@ -271,7 +273,6 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         data = np.zeros((len(seqrecords), ncol), dtype=int)
         aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
 
-        # TODO: check before doing this
         try:
             seqrecords = list(translate(s) for s in seqrecords)
         except TranslationError:
@@ -280,19 +281,18 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         for i, seq in enumerate(seqrecords):
             _, seq_a, seq_b = aligner(seq, self.fasta_seq)
             seq_to_ref, ref_to_seq = make_alignment_dicts(seq_a, seq_b)
-            for j in range(ncol):
+            for ref_idx in range(ncol):
                 try:
                     # TODO: the first half of this can be precomputed
                     # during fit() and not all of it needs to be
                     # computed here
-                    ref_idx = j
                     nearby_ref = find_nearby(ref_idx, self.f2r, self.r2f,
                                              self.searcher, self.radius)
-                    nearby_ref.add(j)
+                    nearby_ref.add(ref_idx)
                     nearby_seq = set(ref_to_seq[elt] for elt in nearby_ref)
-                    data[i, j] = self._compute(seq, seq_to_ref,
-                                               ref_to_seq, ref_idx,
-                                               nearby_ref, nearby_seq)
+                    data[i, ref_idx] = self._compute(seq, seq_to_ref,
+                                                     ref_to_seq, ref_idx,
+                                                     nearby_ref, nearby_seq)
                 except KeyError:
                     pass
         return data
