@@ -270,7 +270,7 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
             raise ValueError(msg)
 
         # TODO: this assumes all default values are zeros
-        data = np.zeros((len(seqrecords), ncol), dtype=int)
+        data = np.zeros((len(seqrecords), ncol))
         aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
 
         try:
@@ -364,8 +364,8 @@ class MSAVectorizerGapIsoelectric(MSAVectorizerStructural):
                     break
                 result.append(seq[i])
             if not result:
-                return 0
+                return 0.0
             analysis = ProteinAnalysis(''.join(result))
             return analysis.isoelectric_point()
         except KeyError:
-            return 0
+            return 0.0
