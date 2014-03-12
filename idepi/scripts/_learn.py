@@ -181,8 +181,19 @@ def main(args=None):
     if ARGS.ISOELECTRIC:
         extractors.append(('isoelectric', MSAVectorizerIsoelectric()))
 
-    extractor = FeatureUnion(extractors, n_jobs=1)  # n_jobs must be one for now
-    X = extractor.fit_transform(alignment)
+    if ARGS.DIFFERENCE:
+        extractors.append(('difference', MSAVectorizerDifference()))
+
+    if ARGS.GAP:
+        extractors.append(('gap', MSAVectorizerGap()))
+
+    if ARGS.GAPISOELECTRIC:
+        extractors.append(('gap-isoelectric', MSAVectorizerGapIsoelectric()))
+
+    # FIXME: do this in a more general way
+    seqrecords_to_fit = list(s for s in seqrecords if s.id != 'HXB2_env')
+    extractor = FeatureUnion(extractors, n_jobs=1)  # n_jobs must be 1 for now
+    X = extractor.fit_transform((alignment, seqrecords_to_fit))
 
     Cs = list(C_range(*ARGS.LOG2C))
     scorer = Scorer(ARGS.OPTSTAT)
