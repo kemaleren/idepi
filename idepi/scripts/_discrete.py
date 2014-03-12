@@ -196,7 +196,7 @@ def main(args=None):
         extractors.append(('gap', MSAVectorizerGap()))
 
     if ARGS.GAPISOELECTRIC:
-        extractors.append(('gap', MSAVectorizerGapIsoelectric()))
+        extractors.append(('gap-isoelectric', MSAVectorizerGapIsoelectric()))
 
     extractor = FeatureUnion(extractors, n_jobs=1)  # n_jobs must be 1 for now
     seqrecords_to_fit = list(s for s in seqrecords if s.id != 'HXB2_env')
