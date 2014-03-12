@@ -142,7 +142,7 @@ def residue_center(r):
     return np.vstack(list(a.coord for a in r)).mean(axis=0)
 
 
-def find_nearby(i, f2r, r2f, searcher, radius):
+def find_nearby(i, f2r, r2f, searcher, radius, include_self=True):
     """For residue in position i, find positions nearby residues.
 
     Parameters
@@ -167,6 +167,8 @@ def find_nearby(i, f2r, r2f, searcher, radius):
         found = searcher.search(residue_center(res), radius=radius,
                                 level='R')
         nearby.update(r2f[r] for r in found if r in r2f)
+    if include_self:
+        nearby.add(i)
     return nearby
 
 
@@ -278,6 +280,11 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
         except TranslationError:
             pass
 
+        nearby = {}
+        for ref_idx in range(ncol):
+            nearby[ref_idx] = find_nearby(ref_idx, self.f2r, self.r2f,
+                                          self.searcher, self.radius)
+
         for i, seq in enumerate(seqrecords):
             _, seq_a, seq_b = aligner(seq, self.fasta_seq)
             seq_to_ref, ref_to_seq = make_alignment_dicts(seq_a, seq_b)
@@ -286,9 +293,7 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
                     # TODO: the first half of this can be precomputed
                     # during fit() and not all of it needs to be
                     # computed here
-                    nearby_ref = find_nearby(ref_idx, self.f2r, self.r2f,
-                                             self.searcher, self.radius)
-                    nearby_ref.add(ref_idx)
+                    nearby_ref = nearby[ref_idx]
                     nearby_seq = set(ref_to_seq[elt] for elt in nearby_ref)
                     data[i, ref_idx] = self._compute(seq, seq_to_ref,
                                                      ref_to_seq, ref_idx,
