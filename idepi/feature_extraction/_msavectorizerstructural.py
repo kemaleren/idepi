@@ -1,4 +1,4 @@
-"""Computes isoelectric point in radius around residues.
+"""Vectorizers that use protein crystal structure.
 
 TODO:
 -----
