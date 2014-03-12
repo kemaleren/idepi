@@ -9,6 +9,8 @@ TODO:
 
 - how to deal with gaps? right now we just ignore them.
 
+- feature names are in reference to 4NCO gp120 positions, not full HXB1 Env.
+
 """
 
 import os
