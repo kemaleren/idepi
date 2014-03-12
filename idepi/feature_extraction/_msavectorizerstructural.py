@@ -330,3 +330,21 @@ class MSAVectorizerDifference(MSAVectorizerStructural):
             if seq_residue.upper() != ref_residue.upper():
                 result += 1
         return result
+
+
+class MSAVectorizerGap(MSAVectorizerStructural):
+    """number of residues following this one that did not get aligned"""
+    name = 'gap'
+
+    def _compute(self, seq, seq_to_ref, ref_to_seq, ref_idx,
+                 nearby_ref, nearby_seq):
+        try:
+            result = 0
+            seq_idx = ref_to_seq[ref_idx]
+            for i in range(seq_idx + 1, len(seq)):
+                if i in seq_to_ref:
+                    break
+                result += 1
+            return result
+        except KeyError:
+            return 0

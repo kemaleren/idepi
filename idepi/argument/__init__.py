@@ -167,6 +167,7 @@ def feature_args(parser):
     parser.add_argument('--radius',                               type=int, dest='RADIUS')
     parser.add_argument('--no-isoelectric', action='store_false',           dest='ISOELECTRIC')
     parser.add_argument('--no-difference', action='store_false',           dest='DIFFERENCE')
+    parser.add_argument('--no-gap',        action='store_false',           dest='GAP')
     parser.set_defaults(
         RADIUS=0
         )

@@ -6,6 +6,7 @@ from Bio.SeqRecord import SeqRecord
 
 from idepi.feature_extraction import MSAVectorizerIsoelectric
 from idepi.feature_extraction import MSAVectorizerDifference
+from idepi.feature_extraction import MSAVectorizerGap
 import idepi.feature_extraction._msavectorizerstructural as struct
 
 
@@ -31,6 +32,22 @@ class TestDifference(unittest.TestCase):
         X = vectorizer.fit_transform((None, (seq,)))
         assert X.sum() > 1
         assert set(X.ravel()) == set((0, 1))
+
+
+class TestGap(unittest.TestCase):
+    def test_base(self):
+        vectorizer = MSAVectorizerGap()
+        X = vectorizer.fit_transform((None, (struct.FASTA_SEQ,)))
+        assert np.all(X == 0)
+
+    def test_one_gap(self):
+        seqstr = str(struct.FASTA_SEQ.seq)
+        seqstr = seqstr[:100] + 'A' + seqstr[100:]
+        seq = SeqRecord(Seq(seqstr))
+        vectorizer = MSAVectorizerGap()
+        X = vectorizer.fit_transform((None, (seq,)))
+        assert X.sum() == 1
+        assert X[0, 99] == 1
 
 
 if __name__ == '__main__':

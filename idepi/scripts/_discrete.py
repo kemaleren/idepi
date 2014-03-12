@@ -62,6 +62,7 @@ from idepi.feature_extraction import (
     MSAVectorizerRegexPairwise,
     MSAVectorizerIsoelectric,
     MSAVectorizerDifference,
+    MSAVectorizerGap,
     )
 from idepi.filters import naive_filter
 from idepi.labeler import (
@@ -189,6 +190,9 @@ def main(args=None):
 
     if ARGS.DIFFERENCE:
         extractors.append(('difference', MSAVectorizerDifference()))
+
+    if ARGS.GAP:
+        extractors.append(('gap', MSAVectorizerGap()))
 
     extractor = FeatureUnion(extractors, n_jobs=1)  # n_jobs must be 1 for now
     seqrecords_to_fit = list(s for s in seqrecords if s.id != 'HXB2_env')
