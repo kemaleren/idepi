@@ -341,7 +341,7 @@ class MSAVectorizerGap(MSAVectorizerStructural):
         try:
             result = 0
             seq_idx = ref_to_seq[ref_idx]
-            for i in range(seq_idx + 1, len(seq)):
+            for i in range(seq_idx + 1, max(seq_to_ref) + 1):
                 if i in seq_to_ref:
                     break
                 result += 1
@@ -352,14 +352,14 @@ class MSAVectorizerGap(MSAVectorizerStructural):
 
 class MSAVectorizerGapIsoelectric(MSAVectorizerStructural):
     """isoelectric point of residues that did not get aligned"""
-    name = 'gap'
+    name = 'gap-isoelectric'
 
     def _compute(self, seq, seq_to_ref, ref_to_seq, ref_idx,
                  nearby_ref, nearby_seq):
         try:
             result = []
             seq_idx = ref_to_seq[ref_idx]
-            for i in range(seq_idx + 1, len(seq)):
+            for i in range(seq_idx + 1, max(seq_to_ref) + 1):
                 if i in seq_to_ref:
                     break
                 result.append(seq[i])
