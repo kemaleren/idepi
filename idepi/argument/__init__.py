@@ -113,11 +113,9 @@ def mrmr_args(parser):
     group.add_argument( '--mid',           action='store_const', const='MID',                   dest='MRMR_METHOD')
     group.add_argument( '--miq',           action='store_const', const='MIQ',                   dest='MRMR_METHOD')
     parser.add_argument('--normalizemrmr', action='store_true',                                 dest='MRMR_NORMALIZE')
-    parser.add_argument('--similar',                                                type=float, dest='SIMILAR')
     parser.set_defaults(
         MRMR_METHOD   ='MID',
         MRMR_NORMALIZE=False,
-        SIMILAR       =0.0 # no similar features by default
         )
     return parser
 

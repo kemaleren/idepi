@@ -125,9 +125,6 @@ def main(args=None):
         finalize_args(ARGS)
         return {}
 
-    if ARGS.MRMR_METHOD == 'MAXREL':
-        ARGS.SIMILAR = 0.0
-
     # set the util params
     set_util_params(ARGS.REFSEQ.id)
 
@@ -213,7 +210,6 @@ def main(args=None):
     mrmr = MRMR(
         method=ARGS.MRMR_METHOD,
         normalize=ARGS.MRMR_NORMALIZE,
-        similar=ARGS.SIMILAR
         )
     svm = GridSearchCV(
         estimator=LinearSVC(class_weight='auto'),
@@ -245,7 +241,7 @@ def main(args=None):
     svm_ = clf.named_steps['svm'].best_estimator_
 
     coefs, ranks = coefs_ranks(mrmr_.ranking_, mrmr_.support_, svm_.coef_)
-    results = Results(extractor.get_feature_names(), scorer, ARGS.SIMILAR)
+    results = Results(extractor.get_feature_names(), scorer)
 
     results.add(y, clf.predict(X), coefs, ranks)
     results.metadata(antibodies, ARGS.LABEL)

@@ -87,7 +87,7 @@ def _dumps_statistics(stats, ident=0):
     return buf + ',\n'.join(output) + '\n' + prefix + '}'
 
 
-def _dumps_weights(weights, ident=0, similar=True):
+def _dumps_weights(weights, ident=0):
     numeric = re_compile(r'[^0-9]+')
 
     def weightkey(v):
@@ -100,7 +100,6 @@ def _dumps_weights(weights, ident=0, similar=True):
     if len(weights) == 0:
         output = ''
     else:
-        similar = False if 'similar' not in weights[0] else similar
         name_len = max(len(v['position']) for v in weights) + 3
         N_len = max(len('%d' % v['N']) for v in weights) + 1
         # rank
@@ -116,58 +115,31 @@ def _dumps_weights(weights, ident=0, similar=True):
             val_fmt = '%% %dd' % val_len
         else:
             raise RuntimeError('someone is fucking with us')
-        if similar:
-            similar_len = max(len(', '.join('"%s"' % r for r in v['similar'])) for v in weights)
-            output = ',\n'.join(prefix + '  { "position": %-*s "N": %-*s "rank": %s, "value": %s, "similar": [ %-*s ] }' % (
-                name_len, '"%s",' % v['position'],
-                N_len, '%d,' % v['N'],
-                rank_fmt % (
-                    v['rank']['mean'],
-                    v['rank']['std']
-                    ),
-                val_fmt % (
-                    (
-                        v['value']['mean'],
-                        v['value']['std']
-                        ) if isinstance(v['value'], dict) else (
-                            v['value']
-                        )
-                    ),
-                similar_len,
-                ', '.join(
-                    '"%s"' % r for r in sorted(
-                        v['similar'],
-                        key=lambda v: int(numeric.sub('', v))
-                        )
+        output = ',\n'.join(prefix + '  { "position": %-*s "N": %-*s "rank": %s, "value": %s }' % (
+            name_len, '"%s",' % v['position'],
+            N_len, '%d,' % v['N'],
+            rank_fmt % (
+                v['rank']['mean'],
+                v['rank']['std']
+                ),
+            val_fmt % (
+                (
+                    v['value']['mean'],
+                    v['value']['std']
+                    ) if isinstance(v['value'], dict) else (
+                        v['value']
                     )
-                ) for v in sorted(weights, key=weightkey)) + '\n'
-        else:
-            output = ',\n'.join(prefix + '  { "position": %-*s "N": %-*s "rank": %s, "value": %s }' % (
-                name_len, '"%s",' % v['position'],
-                N_len, '%d,' % v['N'],
-                rank_fmt % (
-                    v['rank']['mean'],
-                    v['rank']['std']
-                    ),
-                val_fmt % (
-                    (
-                        v['value']['mean'],
-                        v['value']['std']
-                        ) if isinstance(v['value'], dict) else (
-                            v['value']
-                        )
-                    )
-                ) for v in sorted(weights, key=weightkey)) + '\n'
+                )
+            ) for v in sorted(weights, key=weightkey)) + '\n'
 
     return buf + output + prefix + ']'
 
 
 class Results(dict):
 
-    def __init__(self, labels, scorer, similar=0.0):
+    def __init__(self, labels, scorer):
         super(Results, self).__init__()
         self.__labels = labels
-        self.__similar = similar > 0.0
         self.__nfeat = NormalValue(int)
         self.__nfold = 0
         self.__npos = 0
@@ -299,7 +271,7 @@ class Results(dict):
             elif key == 'statistics':
                 ret.append(_dumps_statistics(self[key], 1))
             elif key == 'weights':
-                ret.append(_dumps_weights(self[key], 1, self.__similar))
+                ret.append(_dumps_weights(self[key], 1))
             elif key == 'predictions':
                 ret.append(_dumps_predictions(self[key], 1))
             else:

@@ -126,10 +126,6 @@ def main(args=None):
         finalize_args(ARGS)
         return {}
 
-    # maxrel doesn't support similar
-    if ARGS.MRMR_METHOD == 'MAXREL':
-        ARGS.SIMILAR = 0.0
-
     antibodies = tuple(ARGS.ANTIBODY)
 
     # set the util params
@@ -223,7 +219,7 @@ def main(args=None):
 
     results = None
     for n_features in ARGS.FEATURE_GRID:
-        results_ = Results(extractor.get_feature_names(), scorer, ARGS.SIMILAR)
+        results_ = Results(extractor.get_feature_names(), scorer)
 
         for train_idxs, test_idxs in StratifiedKFold(y, ARGS.CV_FOLDS):
 
@@ -246,7 +242,7 @@ def main(args=None):
                     k=n_features,
                     method=ARGS.MRMR_METHOD,
                     normalize=ARGS.MRMR_NORMALIZE,
-                    similar=ARGS.SIMILAR
+                    discretize=True,
                     )
                 clf = Pipeline([('mrmr', mrmr), ('svm', svm)])
 
