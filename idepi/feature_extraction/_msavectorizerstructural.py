@@ -11,6 +11,11 @@ TODO:
 
 - feature names are in reference to 4NCO gp120 positions, not full HXB1 Env.
 
+- vectorizers would ideally only take LabeledMSA objects, as before.
+  But some structural features need access to the full sequence, and
+  to the orignal reference sequence. One solution: refactor
+  LabeledMSA to provide this information.
+
 """
 
 import os
