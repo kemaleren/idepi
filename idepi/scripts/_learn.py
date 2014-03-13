@@ -82,7 +82,7 @@ from idepi.util import (
 
 from sklearn.grid_search import GridSearchCV
 from sklearn.pipeline import Pipeline
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 
 from sklmrmr import MRMR
 
@@ -216,7 +216,7 @@ def main(args=None):
         similar=ARGS.SIMILAR
         )
     svm = GridSearchCV(
-        estimator=SVC(kernel='linear', class_weight='auto'),
+        estimator=LinearSVC(class_weight='auto'),
         param_grid=dict(C=Cs),
         scoring=scorer,
         n_jobs=C_jobs,

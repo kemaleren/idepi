@@ -87,7 +87,7 @@ from sklearn.cross_validation import StratifiedKFold
 from sklearn.feature_selection import RFE
 from sklearn.grid_search import GridSearchCV
 from sklearn.pipeline import Pipeline
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 
 from sklmrmr import MRMR
 
@@ -213,7 +213,7 @@ def main(args=None):
     # performing feature selection on every iteration
     # of the grid search, which naturally takes forever
     svm = GridSearchCV(
-        estimator=SVC(kernel='linear', class_weight='auto'),
+        estimator=LinearSVC(class_weight='auto'),
         param_grid=dict(C=list(C_range(*ARGS.LOG2C))),
         scoring=scorer,
         n_jobs=int(getenv('NCPU', -1)),
