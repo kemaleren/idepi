@@ -9,7 +9,7 @@ TODO:
 
 - how to deal with gaps? right now we just ignore them.
 
-- feature names are in reference to 4NCO gp120 positions, not full HXB1 Env.
+- feature names are in reference to 4NCO gp120 positions, not full HXB2 Env.
 
 - vectorizers would ideally only take LabeledMSA objects, as before.
   But some structural features need access to the full sequence, and
@@ -34,6 +34,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from BioExt.scorematrices import HIV_BETWEEN_F
 from BioExt.align import Aligner
 from BioExt.misc import translate
+from BioExt.references import hxb2
 
 from idepi import __path__ as idepi_path
 
@@ -177,6 +178,24 @@ def find_nearby(i, f2r, r2f, searcher, radius, include_self=True):
     return nearby
 
 
+def find_seq_neighbors(d, i):
+    lower = None
+    upper = None
+    for j in range(i - 1, -1):
+        if j in d:
+            lower = j
+            break
+    for j in range(i, max(d) + 1):
+        if j in d:
+            upper = j
+            break
+    if lower is None:
+        lower = -1
+    if upper is None:
+        upper = -1
+    return lower, upper
+
+
 class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
     """Structural features.
 
@@ -242,14 +261,25 @@ class MSAVectorizerStructural(BaseEstimator, TransformerMixin):
     def fit(self, tofit):
         alignment, seqrecords = tofit
         self.ref_len = len(self.fasta_seq)
-        column_labels = list(map(str, range(self.ref_len)))
         feature_names = []
         k = 0
 
-        # TODO: these indices refer to 4NCO gp120.
+        aligner = Aligner(HIV_BETWEEN_F.load(), do_codon=False)
+        _, seq_a, seq_b = aligner(self.fasta_seq, translate(hxb2.env.load()))
+        a_to_b, b_to_a = make_alignment_dicts(seq_a, seq_b)
         for i in range(self.ref_len):
             try:
-                feature_name = self.feature_name(column_labels[i])
+                try:
+                    name = "hxb2_posn_{}".format(a_to_b[i] + 1)
+                except KeyError:
+                    lower, upper = find_seq_neighbors(a_to_b, i)
+                    if lower >= 0:
+                        lower += 1
+                    if upper >= 0:
+                        upper += 1
+                    name = ("unmapped_hxb2_posn_btwn_"
+                            "{}_and_{}".format(lower, upper))
+                feature_name = self.feature_name(name)
                 feature_names.append(feature_name)
                 k += 1
             except KeyError:
